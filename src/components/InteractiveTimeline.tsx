@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Plane, Martini } from "lucide-react";
+import { MapPin, Plane, Martini, Heart } from "lucide-react";
 
 const timelineEvents = [
   {
