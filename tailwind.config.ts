@@ -10,8 +10,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Alegreya', 'serif'],
+        body: ['Nunito Sans', 'system-ui', 'sans-serif'],
         headline: ['Belleza', 'sans-serif'],
+        cursive: ['Dancing Script', 'cursive'],
+        romantic: ['Playfair Display', 'serif'],
+        letter: ['Edu Australia VIC WA NT Hand Guides', 'cursive'],
         code: ['monospace'],
       },
       colors: {
@@ -73,20 +76,12 @@ export default {
       },
       keyframes: {
         'accordion-down': {
-          from: {
-            height: '0',
-          },
-          to: {
-            height: 'var(--radix-accordion-content-height)',
-          },
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
         },
         'accordion-up': {
-          from: {
-            height: 'var(--radix-accordion-content-height)',
-          },
-          to: {
-            height: '0',
-          },
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
         },
       },
       animation: {

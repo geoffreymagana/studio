@@ -19,6 +19,7 @@ export function HeartCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [drawingProgress, setDrawingProgress] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -26,16 +27,22 @@ export function HeartCanvas({
     const context = canvas.getContext('2d');
     if (!context) return;
     
-    // Draw faint heart guide
-    context.strokeStyle = "hsla(var(--accent) / 0.3)";
+    // Clear canvas
+    context.clearRect(0, 0, width, height);
+    
+    // Draw simple heart guide with subtle outline
+    context.strokeStyle = "hsla(337, 100%, 75%, 0.15)";
     context.lineWidth = 2;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
     context.beginPath();
     
     const x = width / 2;
     const y = height / 2.5;
-    const heartWidth = width / 12;
-    const heartHeight = height / 8;
+    const heartWidth = width / 10;
+    const heartHeight = height / 6;
 
+    // Draw heart path
     context.moveTo(x, y + heartHeight);
     context.bezierCurveTo(x + heartWidth, y - heartHeight, x + (4 * heartWidth), y, x, y + (3 * heartHeight));
     context.bezierCurveTo(x - (4 * heartWidth), y, x - heartWidth, y - heartHeight, x, y + heartHeight);
@@ -49,20 +56,24 @@ export function HeartCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    let clientX, clientY;
+    
     if ('touches' in e.nativeEvent && e.nativeEvent.touches.length > 0) {
-      return {
-        x: e.nativeEvent.touches[0].clientX - rect.left,
-        y: e.nativeEvent.touches[0].clientY - rect.top,
-      };
-    } else if ('clientX' in e.nativeEvent) { // MouseEvent
-        return {
-            x: e.nativeEvent.clientX - rect.left,
-            y: e.nativeEvent.clientY - rect.top
-        };
+      clientX = e.nativeEvent.touches[0].clientX;
+      clientY = e.nativeEvent.touches[0].clientY;
+    } else if ('clientX' in e.nativeEvent) {
+      clientX = e.nativeEvent.clientX;
+      clientY = e.nativeEvent.clientY;
+    } else {
+      return { x: 0, y: 0 };
     }
+    
     return {
-        x: 'offsetX' in e.nativeEvent ? e.nativeEvent.offsetX : 0,
-        y: 'offsetY' in e.nativeEvent ? e.nativeEvent.offsetY : 0,
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
     };
   };
 
@@ -75,12 +86,18 @@ export function HeartCanvas({
     
     setIsDrawing(true);
     const coords = getCoords(e);
+    
+    // Simple drawing style without neon effects
     context.beginPath();
     context.moveTo(coords.x, coords.y);
     context.lineWidth = 4;
-    context.strokeStyle = "hsl(var(--accent))";
+    context.strokeStyle = "hsl(337, 100%, 75%)"; // Simple pink
     context.lineCap = 'round';
     context.lineJoin = 'round';
+    context.shadowColor = "hsl(337, 100%, 75%)";
+    context.shadowBlur = 2;
+    context.shadowOffsetX = 0;
+    context.shadowOffsetY = 0;
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
@@ -93,6 +110,9 @@ export function HeartCanvas({
     const coords = getCoords(e);
     context.lineTo(coords.x, coords.y);
     context.stroke();
+    
+    // Update progress
+    setDrawingProgress(prev => Math.min(prev + 1, 100));
   };
 
   const stopDrawing = () => {
@@ -103,28 +123,87 @@ export function HeartCanvas({
     const context = canvas?.getContext('2d');
     if (!context) return;
 
-    // Simple check: for this demo, any drawing is a success
-    setIsComplete(true);
-    onDrawSuccess();
+    // Check if enough drawing was done (simple threshold)
+    if (drawingProgress > 15) {
+      setIsComplete(true);
+      onDrawSuccess();
+      
+      // Simple completion effect
+      setTimeout(() => {
+        if (context) {
+          context.shadowBlur = 4;
+          context.stroke();
+        }
+      }, 100);
+    } else {
+      // Reset if not enough drawing
+      setDrawingProgress(0);
+      context.clearRect(0, 0, width, height);
+      // Redraw guide
+      context.strokeStyle = "hsla(337, 100%, 75%, 0.15)";
+      context.lineWidth = 2;
+      context.shadowBlur = 0;
+      context.beginPath();
+      
+      const x = width / 2;
+      const y = height / 2.5;
+      const heartWidth = width / 10;
+      const heartHeight = height / 6;
+
+      context.moveTo(x, y + heartHeight);
+      context.bezierCurveTo(x + heartWidth, y - heartHeight, x + (4 * heartWidth), y, x, y + (3 * heartHeight));
+      context.bezierCurveTo(x - (4 * heartWidth), y, x - heartWidth, y - heartHeight, x, y + heartHeight);
+      context.stroke();
+    }
+  };
+
+  const handleMouseEnter = (e: React.MouseEvent) => {
+    if (isDrawing && !isComplete) {
+      const coords = getCoords(e);
+      const canvas = canvasRef.current;
+      const context = canvas?.getContext('2d');
+      if (context) {
+        context.lineTo(coords.x, coords.y);
+        context.stroke();
+      }
+    }
   };
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={width}
-      height={height}
-      onMouseDown={startDrawing}
-      onMouseMove={draw}
-      onMouseUp={stopDrawing}
-      onMouseLeave={stopDrawing}
-      onTouchStart={startDrawing}
-      onTouchMove={draw}
-      onTouchEnd={stopDrawing}
-      className={cn(
-        "rounded-md border-2 border-dashed bg-muted/50 w-full touch-none",
-        isComplete && "border-accent",
-        className
+    <div className="relative">
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        onMouseDown={startDrawing}
+        onMouseMove={draw}
+        onMouseUp={stopDrawing}
+        onMouseLeave={stopDrawing}
+        onMouseEnter={handleMouseEnter}
+        onTouchStart={startDrawing}
+        onTouchMove={draw}
+        onTouchEnd={stopDrawing}
+        className={cn(
+          "rounded-xl border-2 border-dashed bg-gradient-to-br from-muted/30 to-muted/50 w-full touch-none cursor-crosshair transition-all duration-300",
+          isComplete && "border-accent shadow-lg shadow-accent/20",
+          isDrawing && "border-accent/50",
+          className
+        )}
+      />
+      {!isComplete && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <p className="text-sm text-muted-foreground font-body bg-background/80 px-2 py-1 rounded">
+            Draw a heart here
+          </p>
+        </div>
       )}
-    />
+      {isComplete && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-accent/20 px-3 py-1 rounded-full">
+            <p className="text-sm text-accent-foreground font-body">Perfect! ❤️</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
