@@ -30,14 +30,18 @@ export function HeartCanvas({
     context.strokeStyle = "hsla(var(--accent) / 0.3)";
     context.lineWidth = 2;
     context.beginPath();
-    const topCurveHeight = height * 0.3;
-    const bottomCurveHeight = height * 0.7;
-    context.moveTo(width / 2, topCurveHeight);
-    context.bezierCurveTo(width / 2, topCurveHeight, width / 2 - width / 4, topCurveHeight - topCurveHeight / 2, width/2 - width/4, topCurveHeight + topCurveHeight /2);
-    context.bezierCurveTo(width/2-width/2, height, width/2, bottomCurveHeight, width/2, height);
-    context.bezierCurveTo(width/2, bottomCurveHeight, width/2+width/2, height, width/2+width/4, topCurveHeight + topCurveHeight /2);
-    context.bezierCurveTo(width/2 + width /4, topCurveHeight - topCurveHeight /2, width/2, topCurveHeight, width/2, topCurveHeight);
+    
+    const x = width / 2;
+    const y = height / 2.5;
+    const heartWidth = width / 12;
+    const heartHeight = height / 8;
+
+    context.moveTo(x, y + heartHeight);
+    context.bezierCurveTo(x + heartWidth, y - heartHeight, x + (4 * heartWidth), y, x, y + (3 * heartHeight));
+    context.bezierCurveTo(x - (4 * heartWidth), y, x - heartWidth, y - heartHeight, x, y + heartHeight);
+
     context.stroke();
+    context.closePath();
 
   }, [width, height]);
   
@@ -45,20 +49,26 @@ export function HeartCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    if ('touches' in e.nativeEvent) {
+    if ('touches' in e.nativeEvent && e.nativeEvent.touches.length > 0) {
       return {
         x: e.nativeEvent.touches[0].clientX - rect.left,
         y: e.nativeEvent.touches[0].clientY - rect.top,
       };
+    } else if ('clientX' in e.nativeEvent) { // MouseEvent
+        return {
+            x: e.nativeEvent.clientX - rect.left,
+            y: e.nativeEvent.clientY - rect.top
+        };
     }
     return {
-      x: e.nativeEvent.offsetX,
-      y: e.nativeEvent.offsetY,
+        x: 'offsetX' in e.nativeEvent ? e.nativeEvent.offsetX : 0,
+        y: 'offsetY' in e.nativeEvent ? e.nativeEvent.offsetY : 0,
     };
   };
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
     if (isComplete) return;
+    e.preventDefault();
     const canvas = canvasRef.current;
     const context = canvas?.getContext('2d');
     if (!context) return;
@@ -75,6 +85,7 @@ export function HeartCanvas({
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDrawing || isComplete) return;
+    e.preventDefault();
     const canvas = canvasRef.current;
     const context = canvas?.getContext('2d');
     if (!context) return;
