@@ -59,8 +59,8 @@ A beautifully crafted web application to celebrate our love story, built with Ne
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/anniversary-project.git
-   cd anniversary-project
+   git clone https://github.com/geoffreymagana/studio.git
+   cd studio
    ```
 
 2. **Install dependencies**
@@ -90,7 +90,41 @@ A beautifully crafted web application to celebrate our love story, built with Ne
    npm start
    ```
 
-## 📱 PWA Support
+## � Deployment
+
+### Vercel Deployment
+
+1. **Configure Vercel**
+   - Fork this repository
+   - Import the project to Vercel
+   - Add environment variables in Vercel project settings
+   - Enable automatic deployments
+
+2. **Build Configuration**
+   The project includes necessary configuration files:
+   - `.babelrc` - Babel configuration for Next.js
+   - `next.config.js` - Next.js configuration with PWA support
+   - `vercel.json` - Vercel-specific configurations
+
+3. **Troubleshooting Builds**
+   If you encounter build issues:
+   - Ensure all environment variables are set in Vercel
+   - Verify the `.babelrc` file contains:
+     ```json
+     {
+       "presets": ["next/babel"],
+       "plugins": []
+     }
+     ```
+   - Check Node.js version matches local development
+
+4. **Post-Deployment**
+   - Test the deployed application
+   - Verify PWA functionality
+   - Check media loading and real-time features
+   - Test authentication flow
+
+## �📱 PWA Support
 
 The application is PWA-enabled, allowing installation on mobile devices for a native app-like experience.
 
