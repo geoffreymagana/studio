@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { X, ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { type MediaItem } from './MediaGallery';
+import { optimizeVideoPlayback } from '@/lib/videoOptimizer';
 
 interface MediaViewerProps {
   media: MediaItem;
@@ -108,15 +109,28 @@ export default function MediaViewer({
             <div className="relative w-full max-w-4xl max-h-[85vh] aspect-video">
               <video
                 ref={videoRef}
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  optimizeVideoPlayback(video);
+                }}
                 src={media.src}
                 className="w-full h-full rounded-lg shadow-2xl transition-opacity duration-300"
                 controls
                 controlsList="nodownload"
                 playsInline
+                preload="metadata"
                 autoPlay
                 onLoadStart={() => onLoadingChange?.(true)}
-                onCanPlay={() => onLoadingChange?.(false)}
-                onError={() => onLoadingChange?.(false)}
+                onCanPlay={() => {
+                  onLoadingChange?.(false);
+                  if (videoRef.current) {
+                    videoRef.current.play().catch(console.error);
+                  }
+                }}
+                onError={(e) => {
+                  console.error('Video playback error:', e);
+                  onLoadingChange?.(false);
+                }}
               />
             </div>
           )}

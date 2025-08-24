@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Volume2, VolumeX, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { getOptimizedImageUrl, THUMBNAIL_SIZE, FULLSIZE_SIZE, preloadNextItems, preloadImage } from "@/lib/mediaOptimizer";
+import { preloadVideo, generateVideoThumbnail, optimizeVideoPlayback } from "@/lib/videoOptimizer";
 
 // Dynamic imports for heavy components
 const MediaViewer = dynamic(() => import('./MediaViewer'), {

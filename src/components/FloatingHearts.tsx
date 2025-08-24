@@ -2,16 +2,15 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 
-interface HeartStyle extends React.CSSProperties {
-  '--randomX': number;
-  '--randomY': number;
-  '--randomSize': number;
-  '--randomDelay': number;
-  '--randomDuration': number;
-  '--randomSway': number;
+type CSSPropertiesWithCustomVars = React.CSSProperties & {
+  [key: `--${string}`]: string | number;
+};
+
+interface FloatingHeartsProps {
+  count?: number;
 }
 
-const FloatingHearts = ({ count = 20 }) => {
+const FloatingHearts: React.FC<FloatingHeartsProps> = ({ count = 20 }) => {
   const [hearts, setHearts] = useState<number[]>([]);
 
   useEffect(() => {
@@ -26,7 +25,7 @@ const FloatingHearts = ({ count = 20 }) => {
       const randomDuration = Math.random() * 2 + 3; // 3-5s
       const randomSway = Math.random() * 30 - 15; // -15 to 15px sway
 
-      const style: React.CSSProperties = {
+      const style: CSSPropertiesWithCustomVars = {
         left: `${randomX}%`,
         '--randomSize': randomSize,
         '--randomDelay': randomDelay,
