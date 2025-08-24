@@ -1,11 +1,12 @@
 "use client";
 
 import dynamic from 'next/dynamic';
-import { useState, useRef, useEffect, Suspense } from "react";
+import React, { useState, useRef, useEffect, Suspense, useCallback } from "react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Volume2, VolumeX, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { getOptimizedImageUrl, THUMBNAIL_SIZE, FULLSIZE_SIZE, preloadNextItems, preloadImage } from "@/lib/mediaOptimizer";
 
 // Dynamic imports for heavy components
 const MediaViewer = dynamic(() => import('./MediaViewer'), {
@@ -87,15 +88,15 @@ const mediaItems: MediaItem[] = [
 
 interface MediaGalleryProps {}
 
-export function MediaGallery() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const [isMuted, setIsMuted] = useState(true);
+export function MediaGallery(): JSX.Element {
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [isMuted, setIsMuted] = useState<boolean>(true);
   const [thumbnails, setThumbnails] = useState<{ [key: string]: string }>({});
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>();
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Function to generate video thumbnail
   const generateThumbnail = async (videoSrc: string) => {
@@ -129,21 +130,40 @@ export function MediaGallery() {
     }
   };
 
-  const handleMediaChange = (newIndex: number, startPlayback = false) => {
-    setIsLoading(true);
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setActiveIndex(newIndex);
-      setIsPlaying(startPlayback);
-      setIsTransitioning(false);
-    }, 300);
-  };
+  const handleMediaChange = useCallback(
+    async (newIndex: number, startPlayback: boolean = false): Promise<void> => {
+      setIsLoading(true);
+      setIsTransitioning(true);
 
-  const startSlideshow = () => {
+      // Start preloading next items
+      preloadNextItems(mediaItems, newIndex).catch(console.error);
+
+      // If it's a photo, preload it before showing
+      if (mediaItems[newIndex].type === 'photo') {
+        try {
+          await preloadImage(
+            getOptimizedImageUrl(mediaItems[newIndex].src, FULLSIZE_SIZE.width, FULLSIZE_SIZE.height)
+          );
+        } catch (error) {
+          console.error('Error preloading image:', error);
+        }
+      }
+
+      setTimeout(() => {
+        setActiveIndex(newIndex);
+        setIsPlaying(startPlayback);
+        setIsTransitioning(false);
+        setIsLoading(false);
+      }, 300);
+    },
+    [mediaItems]
+  );
+
+  const startSlideshow = useCallback((): void => {
     handleMediaChange(0, true);
-  };
+  }, [handleMediaChange]);
 
-  const stopSlideshow = () => {
+  const stopSlideshow = useCallback((): void => {
     setIsPlaying(false);
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -151,22 +171,22 @@ export function MediaGallery() {
     if (videoRef.current) {
       videoRef.current.pause();
     }
-  };
+  }, []);
 
-  const closeViewer = () => {
+  const closeViewer = useCallback((): void => {
     setIsTransitioning(true);
     stopSlideshow();
     setTimeout(() => {
       setActiveIndex(-1);
       setIsTransitioning(false);
     }, 300);
-  };
+  }, [stopSlideshow, setIsTransitioning, setActiveIndex]);
 
-  const handleVideoEnded = () => {
-    if (isPlaying) {
+  const handleVideoEnded = useCallback((): void => {
+    if (isPlaying && activeIndex >= 0) {
       setActiveIndex(prev => (prev + 1) % mediaItems.length);
     }
-  };
+  }, [isPlaying, activeIndex, mediaItems.length]);
 
   useEffect(() => {
     if (!isPlaying || activeIndex < 0) {
@@ -193,12 +213,12 @@ export function MediaGallery() {
     };
   }, [isPlaying, activeIndex, mediaItems.length]);
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
+  const toggleMute = useCallback((): void => {
+    setIsMuted(prev => !prev);
     if (videoRef.current) {
       videoRef.current.muted = !isMuted;
     }
-  };
+  }, [isMuted]);
 
   return (
     <div className="space-y-4">
@@ -272,12 +292,14 @@ export function MediaGallery() {
             <div className="relative">
               {item.type === 'photo' ? (
                 <Image
-                  src={item.src}
+                  src={getOptimizedImageUrl(item.src, THUMBNAIL_SIZE.width, THUMBNAIL_SIZE.height)}
                   alt={item.alt}
-                  width={800}
-                  height={600}
+                  width={THUMBNAIL_SIZE.width}
+                  height={THUMBNAIL_SIZE.height}
                   className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
-                  priority
+                  loading="lazy"
+                  placeholder="blur"
+                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4dHRsdHR4dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/2wBDAR4WFiMeJR4lHR0lLiUdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
                 />
               ) : (
                 <div className="relative">

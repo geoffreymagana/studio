@@ -1,6 +1,39 @@
 # Our Love Story: Interactive Anniversary Celebration 💝
 
-A beautifully crafted web application to celebrate our love story, built with Next.js, TypeScript, and Firebase. This interactive experience features love letters, photo memories, distance tracking, and more.
+A beautifully crafted web application to celebrate our love story,## 📱 PWA Support
+
+The application is PWA-enabled, allowing installation on mobile devices for a native app-like experience.
+
+## 🚀 Performance Optimizations
+
+### Media Optimization
+The project includes automatic media optimization for better performance:
+
+1. **Image Optimization**
+   - Converts images to WebP format
+   - Creates optimized thumbnails
+   - Implements lazy loading
+   - Uses blur placeholders
+   - Progressive image loading
+
+2. **Video Optimization**
+   - Generates video thumbnails
+   - Implements lazy loading for videos
+   - Progressive loading of video content
+
+3. **How to Optimize Media**
+   ```bash
+   # Install required dependencies
+   npm install sharp --save-dev
+
+   # Run the optimization script
+   npm run optimize-media
+   ```
+
+4. **Preloading Strategy**
+   - Automatically preloads next 3 items in slideshow
+   - Loads thumbnails first, then full-size images
+   - Progressive enhancement for better user experienceilt with Next.js, TypeScript, and Firebase. This interactive experience features love letters, photo memories, distance tracking, and more.
 
 ## 🌟 Features
 
