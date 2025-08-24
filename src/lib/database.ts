@@ -1,7 +1,8 @@
 import { 
   doc, 
   setDoc, 
-  getDoc, 
+  getDoc,
+  getDocs,
   updateDoc, 
   onSnapshot,
   collection,
@@ -12,6 +13,8 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
+
+const AUTH_KEY = "happy-anniversary-auth";
 
 // Database collection names
 const COLLECTIONS = {
@@ -32,6 +35,8 @@ export interface LoveLetterData {
   content: string;
   timestamp: Date;
   author: string;
+  replyTo?: string;
+  isRead?: boolean;
 }
 
 export interface LocationData {
@@ -114,8 +119,7 @@ export const loveLetterService = {
         orderBy('timestamp', 'desc'),
         limit(50)
       );
-      
-      const querySnapshot = await getDoc(q);
+      const querySnapshot = await getDocs(q);
       const letters: LoveLetterData[] = [];
       
       querySnapshot.forEach((doc) => {
@@ -136,16 +140,37 @@ export const loveLetterService = {
   },
 
   // Add new love letter
-  async addLetter(content: string, author: string = 'Anonymous'): Promise<string> {
+  async addLetter(content: string, author: string = 'Anonymous', replyTo?: string): Promise<string> {
     try {
-      const docRef = await addDoc(collection(db, COLLECTIONS.LOVE_LETTERS), {
+      const letterData: any = {
         content,
         author,
-        timestamp: serverTimestamp()
-      });
+        timestamp: serverTimestamp(),
+        isRead: false,
+      };
+      
+      // Only add replyTo field if it's defined
+      if (replyTo) {
+        letterData.replyTo = replyTo;
+      }
+      
+      const docRef = await addDoc(collection(db, COLLECTIONS.LOVE_LETTERS), letterData);
       return docRef.id;
     } catch (error) {
       console.error('Error adding love letter:', error);
+      throw error;
+    }
+  },
+
+  // Mark letter as read
+  async markAsRead(letterId: string): Promise<void> {
+    try {
+      const docRef = doc(db, COLLECTIONS.LOVE_LETTERS, letterId);
+      await updateDoc(docRef, {
+        isRead: true
+      });
+    } catch (error) {
+      console.error('Error marking letter as read:', error);
       throw error;
     }
   },
@@ -241,11 +266,13 @@ export const authService = {
       const docRef = doc(db, COLLECTIONS.AUTH, 'main');
       await setDoc(docRef, {
         isAuthenticated,
-        lastLogin: new Date()
+        lastLogin: serverTimestamp()
       });
     } catch (error) {
       console.error('Error setting auth status:', error);
-      throw error;
+      // Don't throw the error, just log it and continue
+      // This allows the local storage fallback to work
+      return;
     }
   },
 
@@ -256,12 +283,19 @@ export const authService = {
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        return docSnap.data().isAuthenticated || false;
+        const data = docSnap.data();
+        return data?.isAuthenticated === true;
       }
+      // If document doesn't exist, create it with default values
+      await setDoc(docRef, {
+        isAuthenticated: false,
+        lastLogin: serverTimestamp()
+      });
       return false;
     } catch (error) {
       console.error('Error getting auth status:', error);
-      return false;
+      // On error, fallback to localStorage
+      return localStorage.getItem(AUTH_KEY) === "true";
     }
   }
 };

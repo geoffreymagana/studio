@@ -8,42 +8,86 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HeartCanvas } from "@/components/HeartCanvas";
 import FloatingHearts from "@/components/FloatingHearts";
-import { authService } from "@/lib/database";
+import { checkAuth, setAuth } from "@/lib/auth";
 
 const SECRET_PHRASES = ["mylove", "baby cakes", "my love", "nkatha", "geoffrey", "2408", "0000"];
-const AUTH_KEY = "happy-anniversary-auth";
+
+interface HintInfo {
+  text: string;
+  type: 'default' | 'warm' | 'hot' | 'error';
+}
+
+function getHint(input: string): HintInfo {
+  const cleanInput = input.toLowerCase().trim();
+  
+  // Empty input
+  if (!cleanInput) {
+    return {
+      text: "Hint: It could be a sweet nickname, a special date, or someone special...",
+      type: 'default'
+    };
+  }
+
+  // Check for date format
+  if (/^\d{1,4}$/.test(cleanInput)) {
+    if (cleanInput.length === 4) {
+      return {
+        text: "Hint: You're thinking of numbers... could it be a special date? 🗓️",
+        type: 'warm'
+      };
+    }
+    return {
+      text: "Hint: If it's a date, try the format DDMM",
+      type: 'default'
+    };
+  }
+
+  // Check for names
+  if (cleanInput.includes("nk") || cleanInput.includes("geo")) {
+    return {
+      text: "Hint: You're getting warmer! Someone special? 💝",
+      type: 'hot'
+    };
+  }
+
+  // Check for love-related words
+  if (cleanInput.includes("love") || cleanInput.includes("baby")) {
+    return {
+      text: "Hint: You're very close! Check the spacing and spelling 💕",
+      type: 'hot'
+    };
+  }
+
+  // Default hint for other inputs
+  return {
+    text: "Hint: Try something more personal... a nickname perhaps? 💭",
+    type: 'warm'
+  };
+}
 
 export default function LoginPage() {
   const [phrase, setPhrase] = useState("");
   const [isHeartDrawn, setIsHeartDrawn] = useState(false);
-  const [error, setError] = useState("");
+  const [hint, setHint] = useState<HintInfo>({ text: "", type: 'default' });
   const [showHearts, setShowHearts] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     // Check if already authenticated
-    const checkAuth = async () => {
-      try {
-        const isAuthenticated = await authService.getAuthStatus();
-        if (isAuthenticated) {
-          router.push("/home");
-        }
-      } catch (error) {
-        console.error('Error checking auth status:', error);
-        // Fallback to localStorage check
-        if (localStorage.getItem(AUTH_KEY) === "true") {
-          router.push("/home");
-        }
+    const verifyAuth = async () => {
+      const isAuthenticated = await checkAuth();
+      if (isAuthenticated) {
+        router.push("/home");
       }
     };
 
-    checkAuth();
+    verifyAuth();
   }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setHint({ text: "", type: 'default' });
     setIsLoading(true);
 
     const isValidPhrase = SECRET_PHRASES.some(secret => 
@@ -51,31 +95,33 @@ export default function LoginPage() {
     );
 
     if (!isValidPhrase) {
-      setError("The secret phrase is not quite right. Try again!");
+      const newHint = getHint(phrase);
+      setHint(newHint);
       setIsLoading(false);
       return;
     }
 
     if (!isHeartDrawn) {
-      setError("Don't forget to draw a heart to seal your love!");
+      setHint({
+        text: "Don't forget to draw a heart to seal your love! ❤️",
+        type: 'error'
+      });
       setIsLoading(false);
       return;
     }
 
     try {
-      // Set authentication status in database
-      await authService.setAuthStatus(true);
-      
-      // Also set in localStorage as fallback
-      localStorage.setItem(AUTH_KEY, "true");
-      
+      await setAuth(true);
       setShowHearts(true);
       setTimeout(() => {
         router.push("/home");
       }, 1500); // Wait for hearts to animate a bit
     } catch (error) {
       console.error('Error setting auth status:', error);
-      setError("Authentication failed. Please try again.");
+      setHint({
+        text: "Authentication failed. Please try again.",
+        type: 'error'
+      });
       setIsLoading(false);
     }
   };
@@ -102,10 +148,14 @@ export default function LoginPage() {
                 </div>
                 <Input
                   id="secret-phrase"
-                  type="password"
+                  type="text"
                   placeholder="Whisper sweet nothings..."
                   value={phrase}
-                  onChange={(e) => setPhrase(e.target.value)}
+                  onChange={(e) => {
+                    const newPhrase = e.target.value;
+                    setPhrase(newPhrase);
+                    setHint(getHint(newPhrase));
+                  }}
                   className="font-body border-accent/30 focus:border-accent transition-colors"
                   disabled={isLoading}
                 />
@@ -117,9 +167,27 @@ export default function LoginPage() {
                 </div>
                 <HeartCanvas onDrawSuccess={() => setIsHeartDrawn(true)} />
               </div>
-              {error && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-destructive font-body text-center text-sm">{error}</p>
+              {hint.text && (
+                <div className={`p-3 rounded-lg ${
+                  hint.type === 'error' 
+                    ? 'bg-destructive/10 border border-destructive/20' 
+                    : hint.type === 'hot'
+                    ? 'bg-pink-100 border border-pink-200'
+                    : hint.type === 'warm'
+                    ? 'bg-orange-50 border border-orange-100'
+                    : 'bg-blue-50 border border-blue-100'
+                }`}>
+                  <p className={`font-body text-center text-sm ${
+                    hint.type === 'error'
+                      ? 'text-destructive'
+                      : hint.type === 'hot'
+                      ? 'text-pink-700'
+                      : hint.type === 'warm'
+                      ? 'text-orange-700'
+                      : 'text-blue-700'
+                  }`}>
+                    {hint.text}
+                  </p>
                 </div>
               )}
               <Button 

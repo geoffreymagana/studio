@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Auth collection
+    match /auth/{document} {
+      allow read, write: if true;
+    }
+    
+    // Love Counter collection
+    match /loveCounter/{document} {
+      allow read, write: if true;
+    }
+    
+    // Love Letters collection
+    match /loveLetters/{document} {
+      allow read, write: if true;
+    }
+    
+    // Locations collection
+    match /locations/{document} {
+      allow read, write: if true;
+    }
+  }
+}

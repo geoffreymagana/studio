@@ -75,7 +75,7 @@ export default function DistancePage() {
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
       Math.sin(dLng/2) * Math.sin(dLng/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+    return Number((R * c).toFixed(2));
   };
 
   const handleBack = () => {
@@ -118,7 +118,7 @@ export default function DistancePage() {
       );
     } else {
       // For other locations, use a random distance for demo
-      calculatedDistance = Math.floor(Math.random() * 500) + 50;
+      calculatedDistance = Number((Math.random() * 500 + 50).toFixed(2));
     }
     
     setDistance(calculatedDistance);
@@ -142,10 +142,10 @@ export default function DistancePage() {
     const animationInterval = setInterval(() => {
       currentStep++;
       const newDisplayDistance = startDistance + (increment * currentStep);
-      setDisplayDistance(Math.round(newDisplayDistance));
+      setDisplayDistance(Number(newDisplayDistance.toFixed(2)));
       
       if (currentStep >= steps) {
-        setDisplayDistance(Math.round(endDistance));
+        setDisplayDistance(Number(endDistance.toFixed(2)));
         setIsAnimating(false);
         clearInterval(animationInterval);
       }

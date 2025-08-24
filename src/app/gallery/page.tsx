@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PhotoGallery } from "@/components/PhotoGallery";
+import { MediaGallery } from "@/components/MediaGallery";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -39,7 +39,7 @@ export default function GalleryPage() {
         </header>
 
         <div className="w-full max-w-6xl mx-auto">
-          <PhotoGallery />
+          <MediaGallery />
         </div>
       </main>
     </>
